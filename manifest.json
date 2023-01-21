@@ -1,0 +1,24 @@
+{
+	"manifest_version": 2,
+	"name": "Mute Site",
+	"version": "1.0",
+	"description": "Allows to instantly mute/unmute all tabs from a website.",
+
+	"icons": {
+		"48": "icons/unmute.svg",
+		"96": "icons/unmute.svg"
+	},
+
+	"permissions": [
+		"tabs"
+	],
+
+	"page_action": {
+		"default_icon": "icons/unmute.svg",
+		"default_title": "Toggle Mute Site"
+	},
+
+	"background": {
+		"scripts": ["background.js"]
+	}
+}
