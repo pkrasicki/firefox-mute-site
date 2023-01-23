@@ -1,6 +1,8 @@
 # Mute Site
 This is a Firefox extension that allows to instantly mute/unmute all tabs from a website. The mute button appears when a tab is playing audio. When pressed it will toggle mute on all tabs from that domain.
 
+Available here: https://addons.mozilla.org/firefox/addon/mute-site/
+
 ![screenshot](screenshots/screenshot.png)
 
 ![screenshot](screenshots/screenshot2.png)
