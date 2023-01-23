@@ -2,15 +2,20 @@ const MUTE_ICON = "icons/mute.svg";
 const UNMUTE_ICON = "icons/unmute.svg";
 const MUTE_TITLE = "Mute Site";
 const UNMUTE_TITLE = "Unmute Site";
+const CUSTOM_MENU_ID = "mute-site";
 
-const toggleMuteSite = async () =>
+const toggleMuteSite = async (selectedTab = null) =>
 {
 	try
 	{
-		const activeTabs = await browser.tabs.query({active: true, currentWindow: true});
-		const curTab = activeTabs[0];
-		const isCurTabMuted = curTab.mutedInfo.muted;
-		const domainName = new URL(curTab.url).hostname;
+		if (!selectedTab)
+		{
+			const activeTabs = await browser.tabs.query({active: true, currentWindow: true});
+			selectedTab = activeTabs[0];
+		}
+
+		const isSelectedTabMuted = selectedTab.mutedInfo.muted;
+		const domainName = new URL(selectedTab.url).hostname;
 
 		const tabs = await browser.tabs.query({
 			url: `*://*.${domainName}/*`
@@ -19,7 +24,7 @@ const toggleMuteSite = async () =>
 		tabs.forEach((tab) =>
 		{
 			browser.tabs.update(tab.id, {
-				muted: !isCurTabMuted
+				muted: !isSelectedTabMuted
 			});
 		});
 	} catch (error)
@@ -41,6 +46,12 @@ const initializePageAction = (tab) =>
 	}
 }
 
+const menuCreated = () =>
+{
+	if (browser.runtime.lastError)
+	  console.log("Error creating menu item:", browser.runtime.lastError);
+}
+
 // initialize for all tabs
 browser.tabs.query({}).then((tabs) =>
 {
@@ -58,3 +69,24 @@ browser.tabs.onUpdated.addListener((id, changeInfo, tab) =>
 
 // mute/unmute site when the page action is clicked
 browser.pageAction.onClicked.addListener(toggleMuteSite);
+
+// create custom item for tab menu
+browser.menus.create({
+	id: CUSTOM_MENU_ID,
+	title: MUTE_TITLE,
+	contexts: ["tab"]
+}, menuCreated);
+
+// update menu item's title
+browser.menus.onShown.addListener(async (info, tab) =>
+{
+	const title = tab.mutedInfo.muted ? UNMUTE_TITLE : MUTE_TITLE;
+	browser.menus.update(CUSTOM_MENU_ID, {title: title});
+	browser.menus.refresh();
+});
+
+browser.menus.onClicked.addListener((info, tab) =>
+{
+	if (info.menuItemId === CUSTOM_MENU_ID)
+		toggleMuteSite(tab);
+});
