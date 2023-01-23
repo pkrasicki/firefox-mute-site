@@ -1,7 +1,7 @@
 {
 	"manifest_version": 2,
 	"name": "Mute Site",
-	"version": "1.0",
+	"version": "1.1",
 	"description": "Allows to instantly mute/unmute all tabs from a website.",
 
 	"icons": {
