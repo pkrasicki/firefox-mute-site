@@ -4,6 +4,8 @@ const MUTE_TITLE = "Mute Site";
 const UNMUTE_TITLE = "Unmute Site";
 const CUSTOM_MENU_ID = "mute-site";
 
+const mutedDomains = [];
+
 const toggleMuteSite = async (selectedTab = null) =>
 {
 	try
@@ -27,6 +29,15 @@ const toggleMuteSite = async (selectedTab = null) =>
 				muted: !isSelectedTabMuted
 			});
 		});
+
+		const domainIndex = mutedDomains.indexOf(domainName);
+		if (!isSelectedTabMuted && domainIndex == -1) // this domain just got muted, so add it to the list
+		{
+			mutedDomains.push(domainName);
+		} else if (domainIndex > -1) // it just got unmuted, so remove from the list
+		{
+			mutedDomains.splice(domainIndex, 1);
+		}
 	} catch (error)
 	{
 		console.log(`Error: ${error}`);
@@ -65,6 +76,18 @@ browser.tabs.query({}).then((tabs) =>
 browser.tabs.onUpdated.addListener((id, changeInfo, tab) =>
 {
 	initializePageAction(tab);
+
+	if (changeInfo?.url) // url has changed
+	{
+		// mute domain if it's on muted list
+		const domainName = new URL(tab.url).hostname;
+		if (mutedDomains.includes(domainName))
+		{
+			browser.tabs.update(tab.id, {
+				muted: true
+			});
+		}
+	}
 });
 
 // mute/unmute site when the page action is clicked
