@@ -1,0 +1,31 @@
+{
+  "name": "firefox-mute-site",
+  "version": "1.0.0",
+  "description": "This is a Firefox extension that allows to instantly mute/unmute all tabs from a website",
+  "main": "background.js",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build-addon": "zip -r -FS firefox-mute-site.zip 'manifest.json' 'icons' 'LICENSE' 'dist'",
+    "build": "webpack && npm run build-addon",
+    "build-release": "webpack --mode production --node-env production && npm run build-addon",
+    "archive": "git archive -o firefox-mute-site_source.zip HEAD"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pkrasicki/firefox-mute-site.git"
+  },
+  "keywords": [],
+  "author": "pkrasicki",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/pkrasicki/firefox-mute-site/issues"
+  },
+  "homepage": "https://addons.mozilla.org/firefox/addon/mute-site",
+  "devDependencies": {
+    "html-loader": "^5.1.0",
+    "html-webpack-plugin": "^5.6.2",
+    "webpack": "^5.95.0",
+    "webpack-cli": "^5.1.4"
+  }
+}

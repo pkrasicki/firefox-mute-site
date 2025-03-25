@@ -1,12 +1,46 @@
-const MUTE_ICON = "icons/mute.svg";
-const UNMUTE_ICON = "icons/unmute.svg";
-const MUTE_TITLE = "Mute Site";
-const UNMUTE_TITLE = "Unmute Site";
-const CUSTOM_MENU_ID = "mute-site";
+/*
+Mute Site - a Firefox addon
+Copyright (C) 2025 pkrasicki
 
-const mutedDomains = [];
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-const toggleMuteSite = async (selectedTab = null) =>
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+import { settings } from "./settings";
+import { storage } from "./storage";
+import { pageAction } from "./pageAction";
+import { menu } from "./menu";
+
+export const MUTE_ICON = "icons/mute.svg";
+export const UNMUTE_ICON = "icons/unmute.svg";
+export const MUTE_TITLE = "Mute Site";
+export const UNMUTE_TITLE = "Unmute Site";
+export const CUSTOM_MENU_ID = "mute-site";
+
+export let mutedDomains = [];
+
+const start = async () =>
+{
+	await settings.load();
+
+	if (settings.config.isPersistenceEnabled)
+		mutedDomains = await storage.loadMutedDomains() || [];
+
+	pageAction.initialize();
+	menu.initialize();
+};
+
+export const toggleMuteSite = async (selectedTab = null) =>
 {
 	try
 	{
@@ -16,100 +50,39 @@ const toggleMuteSite = async (selectedTab = null) =>
 			selectedTab = activeTabs[0];
 		}
 
-		const isSelectedTabMuted = selectedTab.mutedInfo.muted;
 		const domainName = new URL(selectedTab.url).hostname;
+		const domainIndex = mutedDomains.indexOf(domainName);
+		const wasDomainMuted = domainIndex > -1;
+
+		if (wasDomainMuted) // it just got unmuted, so remove it from the list
+		{
+			mutedDomains.splice(domainIndex, 1);
+		} else // it just got muted, so add it to the list
+		{
+			mutedDomains.push(domainName);
+		}
 
 		const tabs = await browser.tabs.query({
 			url: `*://*.${domainName}/*`
 		});
 
+		// mute/unmute all tabs that match this domain
 		tabs.forEach((tab) =>
 		{
 			browser.tabs.update(tab.id, {
-				muted: !isSelectedTabMuted
+				muted: !wasDomainMuted
 			});
+
+			pageAction.update(tab, !wasDomainMuted); // update the mute button
 		});
 
-		const domainIndex = mutedDomains.indexOf(domainName);
-		if (!isSelectedTabMuted && domainIndex == -1) // this domain just got muted, so add it to the list
-		{
-			mutedDomains.push(domainName);
-		} else if (domainIndex > -1) // it just got unmuted, so remove from the list
-		{
-			mutedDomains.splice(domainIndex, 1);
-		}
+		if (settings.config.isPersistenceEnabled)
+			storage.updateMutedDomains(mutedDomains); // save changes
+
 	} catch (error)
 	{
-		console.log(`Error: ${error}`);
+		console.error(`Error: ${error}`);
 	}
 };
 
-const initializePageAction = (tab) =>
-{
-	if (tab.audible) // if tab is playing media
-	{
-		const title = tab.mutedInfo.muted ? UNMUTE_TITLE : MUTE_TITLE;
-		const icon = tab.mutedInfo.muted ? UNMUTE_ICON : MUTE_ICON;
-
-		browser.pageAction.setTitle({tabId: tab.id, title: title});
-		browser.pageAction.setIcon({tabId: tab.id, path: icon});
-		browser.pageAction.show(tab.id);
-	}
-}
-
-const menuCreated = () =>
-{
-	if (browser.runtime.lastError)
-	  console.log("Error creating menu item:", browser.runtime.lastError);
-}
-
-// initialize for all tabs
-browser.tabs.query({}).then((tabs) =>
-{
-	for (let tab of tabs)
-	{
-		initializePageAction(tab);
-	}
-});
-
-// update page action on each tab update
-browser.tabs.onUpdated.addListener((id, changeInfo, tab) =>
-{
-	initializePageAction(tab);
-
-	if (changeInfo?.url) // url has changed
-	{
-		// mute domain if it's on muted list
-		const domainName = new URL(tab.url).hostname;
-		if (mutedDomains.includes(domainName))
-		{
-			browser.tabs.update(tab.id, {
-				muted: true
-			});
-		}
-	}
-});
-
-// mute/unmute site when the page action is clicked
-browser.pageAction.onClicked.addListener(toggleMuteSite);
-
-// create custom item for tab menu
-browser.menus.create({
-	id: CUSTOM_MENU_ID,
-	title: MUTE_TITLE,
-	contexts: ["tab"]
-}, menuCreated);
-
-// update menu item's title
-browser.menus.onShown.addListener(async (info, tab) =>
-{
-	const title = tab.mutedInfo.muted ? UNMUTE_TITLE : MUTE_TITLE;
-	browser.menus.update(CUSTOM_MENU_ID, {title: title});
-	browser.menus.refresh();
-});
-
-browser.menus.onClicked.addListener((info, tab) =>
-{
-	if (info.menuItemId === CUSTOM_MENU_ID)
-		toggleMuteSite(tab);
-});
+start();
